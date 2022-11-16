@@ -140,7 +140,7 @@ districts%>%filter(is.na(enrollment))%>%group_by(region, system_name)%>%tally()
 mean(districts$grad, na.rm = TRUE)
 
 ```
-Enrollment can affect graduation rate, schools with smaller enrollment are easily influenced by dropouts, so have smaller graduation rates which may skew data downwards.
+
 
 ### Q12. Redo the previous question but use a weighted average (weighted.mean) graduation across all districts, weighing by enrollment. 
 ###      How much does this change your answer? 
@@ -150,9 +150,117 @@ Enrollment can affect graduation rate, schools with smaller enrollment are easil
 weighted.mean(districts$grad, dplyr::coalesce(districts$enrollment,0), na.rm=TRUE)
 ```
 
+```{r}
+df <- districts %>% filter((!is.na(enrollment))&(!is.na(grad)))
+
+```
+```{r}
+weighted.mean(df$grad, df$enrollment)
+```
+
+The unweighted graduation rate is 90%. 
+The  enrollment weighted graduation rate is 87%.
+Enrollment weighted -- schools with larger enrollments influence
+the average more. 
+The weighted average decreased--schools with larger enrollments have
+smaller graduation rates.
+Weighted-higher enrollments contribute more to the avg.
+
+### Q13. Create a boxplot showing graduation rates per region. 
+###      Does anything stand out?
+
+```{r}
+ggplot(districts)+
+  geom_boxplot(aes(x=region, y=grad, color = region))+
+  ggtitle('Graduation Rate by Region')+
+  coord_flip()+
+  theme_minimal()
+```
+The boxplot shows outliers for Southwest/Memphis at ~50% and MidCumberland at ~10%
 
 
+### Q14. Find the weighted average of graduation rates by region using enrollment as weights. 
+### Compare the results you get for the weighted average to what you see from the boxplots.
 
+
+```{r}
+options(digits = 3)
+districts %>% 
+  group_by(region)%>%
+  summarise(enrollment_weighted_grad = weighted.mean(grad, dplyr::coalesce(enrollment,0), na.rm=TRUE))
+  
+  
+  
+  
+```
+
+Southwest/Memphis region has a lower graduation rate of 79.5, which is consistent with its boxplot
+showing a small outlier and skewed left distribution.
+Midcumberland's graduation rate is not that much lower than other regions even though its boxplot
+shows a small outlier around ~12%.
+
+
+### Q15. For many districts, values for alg_2 are lower than for alg_1. 
+ 
+```{r}
+districts <- districts %>% mutate(alg_diff = alg_1 - alg_2)
+
+```
+
+
+### Create a histogram showing the distribution of differences (alg_1 - alg_2).
+
+```{r}
+ggplot() + 
+  geom_histogram(aes(x=alg_diff, fill="a"), alpha=.7, data=subset(districts, alg_diff <=0),  color = "blue", binwidth = 5) +
+  geom_histogram(aes(x=alg_diff, fill="z"), alpha=.5, data=subset(districts, alg_diff >0),  color="black", binwidth = 5) +
+  
+  scale_fill_manual(name="", values=c("a" = "skyblue", "z" ="red"), labels=c("a"="Alg1 < Alg2", "z" ="Alg1 > Alg2"))+
+  
+  scale_x_continuous(breaks=seq(-20, 60, 10))
+  
+
+```
+The histogram shows about 20 districts had a drop in algebra by about 15 points. 
+
+
+### Which school had the largest drop from alg_1 to alg_2? 
+
+```{r}
+districts%>%filter(alg_diff == max(alg_diff, na.rm=TRUE))%>%select(system_name, alg_1, alg_2, alg_diff)
+```
+Pickett County has the largest drop from alg_1 to alg_2.
+
+
+### For what percentage of schools is it true that alg_2 is larger than alg_1? 
+```{r}
+districts%>%summarise(pct_sch = sum(alg_diff<0, na.rm = TRUE)/nrow(districts))
+```
+```{r}
+districts%>%summarise(pct_sch = 100*sum(na.omit(alg_diff<0))/145)
+```
+12.4% of schools have alg_2 greater than alg_1. 
+
+
+## Is there a similar drop off for eng_2 and eng_3?
+
+```{r}
+districts <- districts %>% mutate(eng23_diff = eng_2 - eng_3)
+
+```
+
+```{r}
+ggplot() + 
+  geom_histogram(aes(x=eng23_diff, fill="a"), alpha=.9, data=subset(districts, eng23_diff <0),  color = "blue", binwidth = 5) +
+  geom_histogram(aes(x=eng23_diff, fill="z"), alpha=.5, data=subset(districts, eng23_diff >0),  color="black", binwidth = 5) +
+  
+  scale_fill_manual(name="", values=c("a" = "skyblue", "z" ="red"), labels=c("a"="Eng2 < Eng3", "z" ="Eng2 > Eng3"))
+  
+  #scale_x_continuous(breaks=seq(-20, 60, 10))
+  
+
+```
+The histogram shows almost all schools had drops in scores from Eng2 to Eng3. 
 
 
 
