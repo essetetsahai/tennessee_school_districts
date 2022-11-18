@@ -242,7 +242,7 @@ districts%>%summarise(pct_sch = 100*sum(na.omit(alg_diff<0))/145)
 12.4% of schools have alg_2 greater than alg_1. 
 
 
-## Is there a similar drop off for eng_2 and eng_3?
+### Is there a similar drop off for eng_2 and eng_3?
 
 ```{r}
 districts <- districts %>% mutate(eng23_diff = eng_2 - eng_3)
@@ -261,6 +261,95 @@ ggplot() +
 
 ```
 The histogram shows almost all schools had drops in scores from Eng2 to Eng3. 
+
+
+```{r}
+districts%>%summarise(pct_sch = 100*sum(na.omit(eng23_diff>0))/145)
+```
+86% of schools showed decrease in score from eng2 to eng3. 
+
+
+### 16. You may have noticed that a lot of rows are missing values. 
+###     Which district has the largest number of missing values? 
+###     What do you notice about schools that have a lot of missing values?
+
+
+
+```{r}
+districts %>% mutate(na_ct = rowSums(is.na(.)))%>%filter(na_ct == max(na_ct))
+```
+West Tenn School for Deaf has the most missing values
+
+
+```{r}
+districts %>% mutate(na_ct = rowSums(is.na(.)))%>%arrange(desc(na_ct))
+```
+
+I cannot see anything that stands out...yet. 
+
+###Q17. Find the correlation between graduation rate and all other variables.
+###     Create a horizontal bar chart showing these correlations. 
+###     Make sure that your plot is ordered by correlation values. 
+###     What do you notice from these correlations?
+
+
+
+```{r}
+districts %>% 
+  select(where(is.numeric)) %>% 
+  cor(. , districts$grad, use = 'complete.obs')
+```
+
+
+```{r}
+cor_dt <- districts %>% 
+  select(where(is.numeric)) %>% 
+  cor(. , districts$grad, use = 'complete.obs') %>% 
+  as_tibble(cor_dt, rownames = "variable") %>% 
+  rename(correlation = V1)%>%
+  filter(variable != "grad")
+
+
+cor_dt
+```
+
+```{r}
+ggplot(data = cor_dt, aes(y=reorder(variable, -correlation), x=correlation)) +
+  geom_bar(stat = 'identity')+
+  theme_bw()
+
+
+
+```
+
+
+```{r}
+ggplot(data = cor_dt, aes(x=correlation, y=reorder(variable, -correlation), fill=correlation)) +
+  geom_bar(stat = 'identity')+
+  scale_fill_gradient(low='firebrick', high='skyblue', space='Lab')
+
+
+
+
+```
+
+Dropout and suspension rates are the most negatively correlated with graduation rate(surprise!)
+Scores in English, Algebra and Sciences are the most positively correlated with graduation rates.
+
+
+###Q18. Create a scatterplot for grad vs. suspended. 
+###     Does what you see make sense given your answer from the previous part?
+
+
+```{r}
+ggplot(districts) +
+  geom_point(aes(suspended, grad),  na.rm = TRUE)+
+  xlim(0,50)+
+  ylim(50,100)
+  
+```
+The scatterplot shows that lower suspension rates are associated with higher graduation rates. 
+
 
 
 
