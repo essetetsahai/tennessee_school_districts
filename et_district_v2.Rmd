@@ -1,8 +1,11 @@
 ---
 title: "R Notebook"
-output: rmarkdown::github_document
+output: html_notebook
 ---
 
+```{r}
+rm(list = ls())
+```
 
 
 
@@ -285,7 +288,9 @@ West Tenn School for Deaf has the most missing values
 districts %>% mutate(na_ct = rowSums(is.na(.)))%>%arrange(desc(na_ct))
 ```
 
-I cannot see anything that stands out...yet. 
+The missing values seem to come from the subject proficiency rate and act_composite columns.
+Maybe the schools did not participate in the state tests.
+They also have missing values in grad and dropout columns
 
 ###Q17. Find the correlation between graduation rate and all other variables.
 ###     Create a horizontal bar chart showing these correlations. 
@@ -348,9 +353,104 @@ ggplot(districts) +
   ylim(50,100)
   
 ```
-The scatterplot shows that lower suspension rates are associated with higher graduation rates. 
+The scatter plot shows that lower suspension rates are associated with higher graduation rates. 
+But for lower suspension rates (<5%), there does not seem to be a strong variability in graduation rate. 
+The negative correlation may be as strong as it is because of a few outliers. 
+
+###Q19. Create a linear regression model using lm with target variable grad and predictor variable suspended. 
+###     What R^2 value does this model have? What is the interpretation of this number?
+
+```{r}
+
+simple_regression_model <-lm(grad ~ suspended, data = districts)
+
+summary(simple_regression_model)
+
+```
+
+The R^2 of the model is 0.0795 or 7.95%. 
+7.95% of the variability in the graduation rate can be explained by suspension rate. 
+
+### Q20. Add the regression line to your scatterplot using geom_smooth with method='lm'. 
+### How do you feel about the regression line after seeing it plotted on the scatterplot?
+
+```{r}
+ggplot(districts, aes(x=suspended, y=grad)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+  
+  
+```
+The regression line does not capture most points well, there is a lot of scatter for
+suspended rate below 5%. 
+This is consistent with the low R^2 value for the model. 
 
 
+## Continued Exploration and Practice
 
+#### Q21. Read in the school-level testing data for 2014, available here. 
+You might find the readxl library useful for this task. 
+If you use this library, be sure to look at the na argument for the read_excel function.
 
+```{r}
+library(readxl)
+```
 
+```{r}
+testing <- read_excel("./data/data_2014_school_base.xlsx", na = c("*", "**"))
+```
+
+#### Q22. How many schools have at least 20 percent of students below bsc for Algebra I? 
+          
+```{r}
+colnames(testing)
+```
+
+```{r}
+count(testing %>% filter((subject == "Algebra I")&(pct_below_bsc >= 20)))
+  
+```
+          
+Which districts do these schools belong to?
+```{r}
+testing %>% 
+  filter((subject == "Algebra I")&(pct_below_bsc >= 20)) %>% 
+  distinct(system_name)
+```
+There are 102 districts that have at least 20% below bsc for Algebra I. 
+
+```{r}
+count(testing %>% distinct(system_name))
+```
+There are 141 total districts in the dataset. 
+
+####Q23. How many schools have at least 20 percent of students below bsc for both Algebra I and English I?
+
+```{r}
+fil_tst <- testing %>%
+  filter(pct_below_bsc >= 20) %>% 
+  filter(subject == "Algebra I" | subject == "English I") %>%
+  select(school_name, subject, pct_below_bsc) 
+
+```
+```{r}
+fil_tst
+```
+
+```{r}
+fil_tst <- fil_tst %>% 
+  group_by(school_name)%>%
+  mutate(row = row_number()) %>% 
+  pivot_wider(names_from = subject, values_from = pct_below_bsc) %>% 
+  select(-row)
+```
+
+```{r}
+fil_tst <- fil_tst %>% 
+  mutate(bothsub= rowSums(is.na(.)))
+```
+
+ 
+ 
+ 
+  
